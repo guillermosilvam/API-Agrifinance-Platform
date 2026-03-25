@@ -13,7 +13,7 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
     destroy=extend_schema(summary="Delete Credit Plan", description="Allows a company to delete an existing credit plan.")
 )
 class CreditPlanViewSet(viewsets.ModelViewSet):
-    queryset = CreditPlan.objects.filter(is_active=True).order_by('-created_at')
+    queryset = CreditPlan.objects.filter(is_active=True, company__is_verified=True).order_by('-created_at')
     serializer_class = CreditPlanSerializer
 
 @extend_schema(tags=['Credit Requests'])
