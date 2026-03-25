@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
 from .models import User, ProducerProfile, CompanyProfile
 from .serializers import UserSerializer, ProducerProfileSerializer, CompanyProfileSerializer
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -8,9 +9,14 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
     list=extend_schema(summary="List Users", description="Returns all user accounts ordered by registration date."),
     retrieve=extend_schema(summary="User Detail", description="Retrieves full details for a specific user account."),
 )
-class UserViewSet(viewsets.ReadOnlyModelViewSet):
+class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('-date_joined')
     serializer_class = UserSerializer
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [AllowAny()]
+        return [IsAuthenticatedOrReadOnly()]
 
 @extend_schema(tags=['Producer Accounts'])
 @extend_schema_view(

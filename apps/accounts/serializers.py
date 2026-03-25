@@ -7,7 +7,12 @@ class UserSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'is_producer', 'is_company']
+        fields = ['id', 'username', 'email', 'password', 'is_producer', 'is_company']
+        extra_kwargs = {'password': {'write_only': True}}
+
+    def create(self, validated_data):
+        user = User.objects.create_user(**validated_data)
+        return user
 
 class ProducerProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
