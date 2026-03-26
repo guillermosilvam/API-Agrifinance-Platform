@@ -43,3 +43,7 @@ class ProducerProfileViewSet(viewsets.ModelViewSet):
 class CompanyProfileViewSet(viewsets.ModelViewSet):
     queryset = CompanyProfile.objects.all()
     serializer_class = CompanyProfileSerializer
+
+def perform_create(self, serializer):
+    # Asigna automáticamente el perfil del productor autenticado a la solicitud
+    serializer.save(producer=self.request.user.producer_profile)

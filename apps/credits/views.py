@@ -1,7 +1,8 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, permissions
 from .serializers import CreditPlanSerializer, CreditRequestSerializer
 from .models import CreditPlan, CreditRequest
 from drf_spectacular.utils import extend_schema, extend_schema_view
+from .permissions import IsCompanyUser, IsProducerUser
 
 @extend_schema(tags=['Credit Plans'])
 @extend_schema_view(
@@ -15,6 +16,13 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 class CreditPlanViewSet(viewsets.ModelViewSet):
     queryset = CreditPlan.objects.filter(is_active=True, company__is_verified=True).order_by('-created_at')
     serializer_class = CreditPlanSerializer
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsCompanyUser()]
+        return [permissions.IsAuthenticated()]
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company_profile)
 
 @extend_schema(tags=['Credit Requests'])
 @extend_schema_view(
@@ -31,3 +39,11 @@ class CreditPlanViewSet(viewsets.ModelViewSet):
 class CreditRequestViewSet(viewsets.ModelViewSet):
     queryset = CreditRequest.objects.all()
     serializer_class = CreditRequestSerializer
+    
+    def get_permissions(self):
+        if self.action == 'create':
+            return [IsProducerUser()]
+        return [permissions.IsAuthenticated()]
+    
+    def perform_create(self, serializer):
+        serializer.save(producer=self.request.user.producer_profile)
