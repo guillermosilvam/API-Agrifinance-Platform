@@ -1,7 +1,8 @@
-from rest_framework import viewsets
-from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
+from rest_framework import viewsets, status, generics, permissions
+from rest_framework.response import Response
+from rest_framework.permissions import IsAdminUser, AllowAny
 from .models import User, ProducerProfile, CompanyProfile
-from .serializers import UserSerializer, ProducerProfileSerializer, CompanyProfileSerializer
+from .serializers import UserSerializer, ProducerProfileSerializer, CompanyProfileSerializer, CompanyRegisterSerializer, ProducerRegisterSerializer
 from drf_spectacular.utils import extend_schema, extend_schema_view
 
 @extend_schema(tags=['Accounts'])
@@ -9,14 +10,10 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
     list=extend_schema(summary="List Users", description="Returns all user accounts ordered by registration date."),
     retrieve=extend_schema(summary="User Detail", description="Retrieves full details for a specific user account."),
 )
-class UserViewSet(viewsets.ModelViewSet):
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.all().order_by('-date_joined')
     serializer_class = UserSerializer
-
-    def get_permissions(self):
-        if self.action == 'create':
-            return [AllowAny()]
-        return [IsAuthenticatedOrReadOnly()]
+    permission_classes = [permissions.IsAdminUser]
 
 @extend_schema(tags=['Producer Accounts'])
 @extend_schema_view(
@@ -45,5 +42,14 @@ class CompanyProfileViewSet(viewsets.ModelViewSet):
     serializer_class = CompanyProfileSerializer
 
 def perform_create(self, serializer):
-    # Asigna automáticamente el perfil del productor autenticado a la solicitud
     serializer.save(producer=self.request.user.producer_profile)
+
+@extend_schema(tags=['Producer Registration'])
+class ProducerRegisterView(generics.CreateAPIView):
+    serializer_class = ProducerRegisterSerializer
+    permission_classes = [AllowAny]
+
+@extend_schema(tags=['Company Registration'])
+class CompanyRegisterView(generics.CreateAPIView):
+    serializer_class = CompanyRegisterSerializer
+    permission_classes = [AllowAny]
