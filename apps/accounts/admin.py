@@ -12,5 +12,14 @@ class UserAdmin(DefaultUserAdmin):
         ('Role Information', {'fields': ('is_producer', 'is_company')}),
     )
 
-admin.site.register(ProducerProfile)
-admin.site.register(CompanyProfile)
+@admin.register(ProducerProfile)
+class ProducerProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'farm_name', 'rif', 'created_at')
+    search_fields = ('farm_name', 'rif', 'user__username')
+
+@admin.register(CompanyProfile)
+class CompanyProfileAdmin(admin.ModelAdmin):
+    list_display = ('company_name', 'rif', 'status', 'is_verified_at')
+    list_filter = ('status',)
+    search_fields = ('company_name', 'rif', 'user__username')
+    readonly_fields = ('is_verified_at',)

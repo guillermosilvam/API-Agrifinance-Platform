@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.db import transaction
 from .models import User, ProducerProfile, CompanyProfile
+from django.utils import timezone
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -79,3 +80,20 @@ class CompanyRegisterSerializer(serializers.ModelSerializer):
             rif=rif
         )
         return user
+
+class CompanyVerificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CompanyProfile
+        fields = ['status', 'is_verified_at']
+        read_only_fields = ['is_verified_at']
+
+    def update(self, instance, validated_data):
+        new_status = validated_data.get('status')
+        instance.status = new_status
+
+        if new_status == CompanyProfile.VERIFIED:
+            instance.is_verified_at = timezone.now()
+        else:
+            instance.is_verified_at = None
+        instance.save()
+        return instance

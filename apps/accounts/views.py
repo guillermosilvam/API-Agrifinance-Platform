@@ -1,8 +1,10 @@
-from rest_framework import viewsets, status, generics, permissions
+from rest_framework import viewsets, generics, permissions, status
+from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, AllowAny
 from .models import User, ProducerProfile, CompanyProfile
-from .serializers import UserSerializer, ProducerProfileSerializer, CompanyProfileSerializer, CompanyRegisterSerializer, ProducerRegisterSerializer
+from .serializers import UserSerializer, ProducerProfileSerializer, CompanyProfileSerializer, CompanyRegisterSerializer, ProducerRegisterSerializer, CompanyVerificationSerializer
 from drf_spectacular.utils import extend_schema, extend_schema_view
 
 @extend_schema(tags=['Accounts'])
@@ -41,9 +43,31 @@ class CompanyProfileViewSet(viewsets.ModelViewSet):
     queryset = CompanyProfile.objects.all()
     serializer_class = CompanyProfileSerializer
 
-def perform_create(self, serializer):
-    serializer.save(producer=self.request.user.producer_profile)
+@extend_schema(tags=['Company Verification'])
+class CompanyReviewView(APIView):
+    permission_classes = [IsAdminUser]
 
+    @extend_schema(
+        request=CompanyVerificationSerializer,
+        responses={200: CompanyVerificationSerializer},
+        summary="Review Company Status",
+        description="Admin only. Updates status to verified or rejected."
+    )
+    def post(self, request, pk):
+        try:
+            company = CompanyProfile.objects.get(pk=pk)
+        except CompanyProfile.DoesNotExist:
+            return Response({"error": "Company not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = CompanyVerificationSerializer(company, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": f"Status updated to {company.status}",
+                "status": company.status
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
 @extend_schema(tags=['Producer Registration'])
 class ProducerRegisterView(generics.CreateAPIView):
     serializer_class = ProducerRegisterSerializer

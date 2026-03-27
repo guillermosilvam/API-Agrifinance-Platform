@@ -14,7 +14,10 @@ from .permissions import IsCompanyUser, IsProducerUser
     destroy=extend_schema(summary="Delete Credit Plan", description="Allows a company to delete an existing credit plan.")
 )
 class CreditPlanViewSet(viewsets.ModelViewSet):
-    queryset = CreditPlan.objects.filter(is_active=True, company__is_verified=True).order_by('-created_at')
+    queryset = CreditPlan.objects.filter(
+        is_active=True,
+        company__status='verified'
+    ).order_by('-created_at')
     serializer_class = CreditPlanSerializer
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:

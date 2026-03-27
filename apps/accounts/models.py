@@ -30,6 +30,16 @@ class ProducerProfile(models.Model):
         return f"{self.farm_name} ({self.user.username})"
     
 class CompanyProfile(models.Model):
+    PENDING = 'pending'
+    VERIFIED = 'verified'
+    REJECTED = 'rejected'
+
+    STATUS_CHOICES = [
+        (PENDING, 'Pending'),
+        (VERIFIED, 'Verified'),
+        (REJECTED, 'Rejected'),
+    ]
+
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
@@ -37,8 +47,13 @@ class CompanyProfile(models.Model):
     )
     rif = models.CharField(max_length=20, unique=True)
     company_name = models.CharField(max_length=150)
-    is_verified = models.BooleanField(default=False)
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=PENDING
+    )
     is_verified_at = models.DateTimeField(null=True, blank=True)
+    
 
     def __str__(self):
         return self.company_name
