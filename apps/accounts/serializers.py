@@ -17,68 +17,131 @@ class ProducerProfileSerializer(serializers.ModelSerializer):
         model = ProducerProfile
         fields = '__all__'
 
+    def validate(self, data):
+        total_area = data.get('total_area')
+        cultivated_area = data.get('cultivated_area')
+        
+        if self.instance:
+            total_area = total_area if total_area is not None else self.instance.total_area
+            cultivated_area = cultivated_area if cultivated_area is not None else self.instance.cultivated_area
+
+        if total_area is not None and cultivated_area is not None:
+            if cultivated_area > total_area:
+                raise serializers.ValidationError({
+                    "cultivated_area": "Cultivated area cannot be strictly greater than total area."
+                })
+        return data
+
 class CompanyProfileSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
 
     class Meta:
         model = CompanyProfile
         fields = '__all__'
+        read_only_fields = ['status', 'is_verified_at']
+
+    def validate_corporate_phone(self, value):
+        if value:
+            # Basic validation for phone number
+            clean_value = value.replace('+', '').replace('-', '').replace(' ', '')
+            if not clean_value.isdigit():
+                raise serializers.ValidationError("Phone number must contain only digits and valid separators (+, -, spaces).")
+        return value
 
 class ProducerRegisterSerializer(serializers.ModelSerializer):
-    # Definición de campos adicionales
-    farm_name = serializers.CharField(max_length=100, write_only=True)
+    farm_name = serializers.CharField(max_length=150, write_only=True)
     address = serializers.CharField(write_only=True)
     rif = serializers.CharField(max_length=20, required=False, write_only=True)
+    
+    # New Fields
+    national_id = serializers.CharField(max_length=20, required=False, write_only=True)
+    phone_number = serializers.CharField(max_length=20, required=False, write_only=True)
+    total_area = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, write_only=True)
+    cultivated_area = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, write_only=True)
+    land_tenure = serializers.CharField(max_length=20, required=False, write_only=True)
+    machinery_inventory = serializers.CharField(required=False, write_only=True)
+    road_condition = serializers.CharField(max_length=20, required=False, write_only=True)
+    main_activity = serializers.CharField(max_length=100, required=False, write_only=True)
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'farm_name', 'address', 'rif']
-        # ESTA ES LA CLAVE: Marca los campos como solo escritura
+        fields = [
+            'username', 'email', 'password', 'farm_name', 'address', 'rif',
+            'national_id', 'phone_number', 'total_area', 'cultivated_area',
+            'land_tenure', 'machinery_inventory', 'road_condition', 'main_activity'
+        ]
         extra_kwargs = {
             'password': {'write_only': True},
         }
 
     @transaction.atomic
     def create(self, validated_data):
-        farm_name = validated_data.pop('farm_name')
-        address = validated_data.pop('address')
-        rif = validated_data.pop('rif', None)
+        # Extract profiles fields
+        profile_data = {
+            'farm_name': validated_data.pop('farm_name', ''),
+            'address': validated_data.pop('address', ''),
+            'rif': validated_data.pop('rif', None),
+            'national_id': validated_data.pop('national_id', None),
+            'phone_number': validated_data.pop('phone_number', None),
+            'total_area': validated_data.pop('total_area', None),
+            'cultivated_area': validated_data.pop('cultivated_area', None),
+            'land_tenure': validated_data.pop('land_tenure', None),
+            'machinery_inventory': validated_data.pop('machinery_inventory', None),
+            'road_condition': validated_data.pop('road_condition', None),
+            'main_activity': validated_data.pop('main_activity', None),
+        }
         
         user = User.objects.create_user(is_producer=True, is_company=False, **validated_data)
         
-        # Se crea el perfil vinculado al usuario en PostgreSQL
-        ProducerProfile.objects.create(
-            user=user,
-            farm_name=farm_name,
-            address=address,
-            rif=rif if rif else f"TEMP-P-{user.id}"
-        )
+        # Ensure RIF
+        if not profile_data['rif']:
+            profile_data['rif'] = f"TEMP-P-{user.id}"
+            
+        ProducerProfile.objects.create(user=user, **profile_data)
         return user
 
 class CompanyRegisterSerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(max_length=150, write_only=True)
     rif = serializers.CharField(max_length=20, write_only=True)
 
+    # New Fields
+    legal_name = serializers.CharField(max_length=200, required=False, write_only=True)
+    corporate_phone = serializers.CharField(max_length=20, required=False, write_only=True)
+    website = serializers.URLField(required=False, write_only=True)
+    fiscal_address = serializers.CharField(required=False, write_only=True)
+    company_type = serializers.CharField(max_length=20, required=False, write_only=True)
+    description = serializers.CharField(required=False, write_only=True)
+    response_time = serializers.CharField(max_length=50, required=False, write_only=True)
+
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'company_name', 'rif']
+        fields = [
+            'username', 'email', 'password', 'company_name', 'rif',
+            'legal_name', 'corporate_phone', 'website', 'fiscal_address',
+            'company_type', 'description', 'response_time'
+        ]
         extra_kwargs = {
             'password': {'write_only': True},
         }
 
     @transaction.atomic
     def create(self, validated_data):
-        company_name = validated_data.pop('company_name')
-        rif = validated_data.pop('rif')
+        profile_data = {
+            'company_name': validated_data.pop('company_name'),
+            'rif': validated_data.pop('rif'),
+            'legal_name': validated_data.pop('legal_name', None),
+            'corporate_phone': validated_data.pop('corporate_phone', None),
+            'website': validated_data.pop('website', None),
+            'fiscal_address': validated_data.pop('fiscal_address', None),
+            'company_type': validated_data.pop('company_type', None),
+            'description': validated_data.pop('description', None),
+            'response_time': validated_data.pop('response_time', None),
+        }
         
         user = User.objects.create_user(is_producer=False, is_company=True, **validated_data)
         
-        # El campo is_verified queda en False por defecto para aprobación del admin
-        CompanyProfile.objects.create(
-            user=user,
-            company_name=company_name,
-            rif=rif
-        )
+        # El campo status queda en 'pending' por defecto para aprobación del admin
+        CompanyProfile.objects.create(user=user, **profile_data)
         return user
 
 class CompanyVerificationSerializer(serializers.ModelSerializer):

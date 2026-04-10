@@ -40,7 +40,17 @@ class CreditPlanViewSet(viewsets.ModelViewSet):
     destroy=extend_schema(summary="Delete Application", description="Allows a producer to delete an existing credit request.")
 )
 class CreditRequestViewSet(viewsets.ModelViewSet):
-    queryset = CreditRequest.objects.all()
+    queryset = CreditRequest.objects.none()
+    
+    def get_queryset(self):
+        user = self.request.user
+        if getattr(user, 'is_company', False) and hasattr(user, 'company_profile'):
+            return CreditRequest.objects.filter(credit_plan__company=user.company_profile)
+        if getattr(user, 'is_producer', False) and hasattr(user, 'producer_profile'):
+            return CreditRequest.objects.filter(producer=user.producer_profile)
+        if user.is_staff:
+            return CreditRequest.objects.all()
+        return CreditRequest.objects.none()
     serializer_class = CreditRequestSerializer
     
     def get_permissions(self):
