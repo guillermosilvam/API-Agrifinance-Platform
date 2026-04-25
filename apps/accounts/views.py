@@ -1,10 +1,11 @@
 from rest_framework import viewsets, generics, permissions, status
 from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAdminUser, AllowAny
 from .models import User, ProducerProfile, CompanyProfile
-from .serializers import UserSerializer, ProducerProfileSerializer, CompanyProfileSerializer, CompanyRegisterSerializer, ProducerRegisterSerializer, CompanyVerificationSerializer
+from .serializers import UserSerializer, ProducerProfileSerializer, CompanyProfileSerializer, CompanyRegisterSerializer, ProducerRegisterSerializer, CompanyVerificationSerializer, CustomTokenObtainPairSerializer
 from drf_spectacular.utils import extend_schema, extend_schema_view
 
 @extend_schema(tags=['Accounts'])
@@ -16,6 +17,12 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = User.objects.all().order_by('-date_joined')
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAdminUser]
+
+    @extend_schema(summary="Mi Perfil", description="Retorna los datos y el perfil anidado del usuario autenticado actualmente.")
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def me(self, request):
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)
 
 @extend_schema(tags=['Producer Accounts'])
 @extend_schema_view(
@@ -77,3 +84,7 @@ class ProducerRegisterView(generics.CreateAPIView):
 class CompanyRegisterView(generics.CreateAPIView):
     serializer_class = CompanyRegisterSerializer
     permission_classes = [AllowAny]
+
+@extend_schema(tags=['Authentication'])
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = CustomTokenObtainPairSerializer

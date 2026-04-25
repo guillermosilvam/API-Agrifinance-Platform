@@ -2,12 +2,32 @@ from rest_framework import serializers
 from django.db import transaction
 from .models import User, ProducerProfile, CompanyProfile
 from django.utils import timezone
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+class BaseProducerProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProducerProfile
+        exclude = ['user']
+
+class BaseCompanyProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CompanyProfile
+        exclude = ['user']
 
 class UserSerializer(serializers.ModelSerializer):
+    profile = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password', 'is_producer', 'is_company']
+        fields = ['id', 'username', 'email', 'password', 'is_producer', 'is_company', 'profile']
         extra_kwargs = {'password': {'write_only': True}}
+        
+    def get_profile(self, obj):
+        if obj.is_producer and hasattr(obj, 'producerprofile'):
+            return BaseProducerProfileSerializer(obj.producerprofile).data
+        elif obj.is_company and hasattr(obj, 'companyprofile'):
+            return BaseCompanyProfileSerializer(obj.companyprofile).data
+        return None
 
 
 class ProducerProfileSerializer(serializers.ModelSerializer):
@@ -160,3 +180,24 @@ class CompanyVerificationSerializer(serializers.ModelSerializer):
             instance.is_verified_at = None
         instance.save()
         return instance
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        
+        # Determinar rol dinamico para frontend (Next.js)
+        role = 'admin'
+        if self.user.is_company:
+            role = 'company'
+        elif self.user.is_producer:
+            role = 'producer'
+        elif self.user.is_superuser or self.user.is_staff:
+            role = 'admin'
+            
+        data['user'] = {
+            'id': self.user.id,
+            'username': self.user.username,
+            'email': self.user.email,
+            'role': role
+        }
+        return data

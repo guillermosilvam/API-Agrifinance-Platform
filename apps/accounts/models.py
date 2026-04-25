@@ -35,8 +35,6 @@ class ProducerProfile(models.Model):
     rif = models.CharField(max_length=20, unique=True)
     farm_name = models.CharField(max_length=150, verbose_name="Farm Name")
     address = models.TextField()
-    
-    # New fields
     national_id = models.CharField(max_length=20, unique=True, null=True, blank=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
     total_area = models.DecimalField(max_digits=10, decimal_places=2, help_text="Total hectares", null=True, blank=True)
@@ -81,8 +79,6 @@ class CompanyProfile(models.Model):
         choices=STATUS_CHOICES,
         default=PENDING
     )
-    
-    # New fields
     legal_name = models.CharField(max_length=200, help_text="Full legal name", null=True, blank=True)
     corporate_phone = models.CharField(max_length=20, null=True, blank=True)
     website = models.URLField(null=True, blank=True)
