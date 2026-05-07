@@ -19,9 +19,17 @@ class CreditPlan(models.Model):
         return f"{self.title} - {self.company.company_name}"
     
 class CreditRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pendiente'),
+        ('under_review', 'En Revision'),
+        ('approved', 'Aprobado'),
+        ('rejected', 'Rechazado'),
+    ]
     producer = models.ForeignKey(ProducerProfile, on_delete=models.CASCADE, related_name='requests')
     credit_plan = models.ForeignKey(CreditPlan, on_delete=models.CASCADE, related_name='applications')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     application_date = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         constraints =  [

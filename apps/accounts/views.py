@@ -37,6 +37,25 @@ class ProducerProfileViewSet(viewsets.ModelViewSet):
     queryset = ProducerProfile.objects.all()
     serializer_class = ProducerProfileSerializer
 
+    @extend_schema(summary="Export Producer Data", description="Exports all data related to the producer, including credit requests.")
+    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def export(self, request, pk=None):
+        producer = self.get_object()
+        # Verificar permisos (solo el productor mismo o admins o empresas pueden verlo?)
+        # Por ahora lo mantenemos simple: permitimos a autenticados (Productores/Bancos)
+        
+        from apps.credits.serializers import CreditRequestSerializer
+        from apps.credits.models import CreditRequest
+        
+        requests = CreditRequest.objects.filter(producer=producer)
+        requests_data = CreditRequestSerializer(requests, many=True).data
+        
+        serializer = self.get_serializer(producer)
+        data = serializer.data
+        data['credit_requests'] = requests_data
+        
+        return Response(data)
+
 @extend_schema(tags=['Company Accounts'])
 @extend_schema_view(
     list=extend_schema(summary="List Company Profiles", description="Returns all company profiles."),
@@ -49,6 +68,23 @@ class ProducerProfileViewSet(viewsets.ModelViewSet):
 class CompanyProfileViewSet(viewsets.ModelViewSet):
     queryset = CompanyProfile.objects.all()
     serializer_class = CompanyProfileSerializer
+
+    @extend_schema(summary="Export Company Data", description="Exports all data related to the company, including credit plans.")
+    @action(detail=True, methods=['get'], permission_classes=[permissions.IsAuthenticated])
+    def export(self, request, pk=None):
+        company = self.get_object()
+        
+        from apps.credits.serializers import CreditPlanSerializer
+        from apps.credits.models import CreditPlan
+        
+        plans = CreditPlan.objects.filter(company=company)
+        plans_data = CreditPlanSerializer(plans, many=True).data
+        
+        serializer = self.get_serializer(company)
+        data = serializer.data
+        data['credit_plans'] = plans_data
+        
+        return Response(data)
 
 @extend_schema(tags=['Company Verification'])
 class CompanyReviewView(APIView):
